@@ -695,6 +695,7 @@ private:
     }
 };
 
+/*
 int main()
 {
     try
@@ -710,32 +711,4 @@ int main()
 
     return 0;
 }
-
-/*
-HOW TO USE THE SYSTEM:
-
-1. For automatic CSV loading:
-   CSVAnalyzer analyzer;
-   analyzer.loadCSV("your_data.csv");
-   analyzer.printBasicStatistics();
-
-2. For manual data creation:
-   Dato myData({"Col1", "Col2"}, {DataType::INTEGER, DataType::STRING});
-   myData.setValue("Col1", 42);
-   myData.setValue("Col2", std::string("Hello"));
-
-3. For adding new columns dynamically:
-   myData.addColumn("NewCol", DataType::FLOAT);
-   myData.setValue("NewCol", 3.14f);
-
-4. For type conversion from strings:
-   myData.setValueFromString("Col1", "123");  // Automatically converts to int
-
-5. For statistical analysis:
-   analyzer.printNumericStatistics();
-   analyzer.printCategoricalStatistics();
-
-6. For searching and filtering:
-   auto results = analyzer.searchValue("ColumnName", "SearchValue");
-   auto filtered = analyzer.filterData("ColumnName", ">", "100");
 */
