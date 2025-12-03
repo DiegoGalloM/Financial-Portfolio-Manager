@@ -22,18 +22,15 @@ enum class DataType
     CATEGORY
 };
 
-enum class Category
-{
-    UNKNOWN,
-    GRADE_A,
-    GRADE_B,
-    GRADE_C,
-    GRADE_D,
-    GRADE_F,
-    CUSTOM
+struct NamedCategory {
+    string value;
+
+    // Overload operators so this struct works inside variants and comparisons
+    bool operator==(const NamedCategory& other) const { return value == other.value; }
+    bool operator<(const NamedCategory& other) const { return value < other.value; }
 };
 
-using DataValue = variant<int, float, string, chrono::year_month_day, Category>;
+using DataValue = variant<int, float, string, chrono::year_month_day, NamedCategory>;
 
 class Dato
 {
@@ -41,7 +38,6 @@ private:
     vector<string> columnNames;
     vector<DataType> columnTypes;
     vector<DataValue> values;
-    map<string, std::vector<string>> categoryMappings; // For custom categories
 
 public:
     Dato() = default;
@@ -55,8 +51,43 @@ public:
     Dato(const Dato &other)
         : columnNames(other.columnNames),
           columnTypes(other.columnTypes),
-          values(other.values),
-          categoryMappings(other.categoryMappings) {}
+          values(other.values){}
+    
+    void setValue(size_t index, const string &val)
+    {
+        if (index >= values.size())
+            return;
+
+        try
+        {
+            switch (columnTypes[index])
+            {
+            case DataType::INTEGER:
+                values[index] = stoi(val);
+                break;
+            case DataType::FLOAT:
+                values[index] = stof(val);
+                break;
+            case DataType::STRING:
+                values[index] = val;
+                break;
+            case DataType::DATE:
+                values[index] = parseDate(val);
+                break;
+            case DataType::CATEGORY:
+                values[index] = parseCategory(val);
+                break;
+            }
+        }
+        catch (...)
+        {
+            // Handle conversion errors (defaults)
+            if (columnTypes[index] == DataType::INTEGER) values[index] = 0;
+            else if (columnTypes[index] == DataType::FLOAT) values[index] = 0.0f;
+            else if (columnTypes[index] == DataType::STRING) values[index] = "";
+            else if (columnTypes[index] == DataType::CATEGORY) values[index] = NamedCategory{"Unknown"};
+        }
+    }
 
     Dato &operator=(const Dato &other)
     {
@@ -65,7 +96,7 @@ public:
             columnNames = other.columnNames;
             columnTypes = other.columnTypes;
             values = other.values;
-            categoryMappings = other.categoryMappings;
+
         }
         return *this;
     }
@@ -130,34 +161,31 @@ public:
     }
 
     // Method to get value as string for display
-    std::string getValueAsString(size_t columnIndex) const
+string getValueAsString(size_t index) const
     {
-        if (columnIndex >= values.size())
-        {
-            return "N/A";
-        }
+        if (index >= values.size())
+            return "";
 
-        return visit([this](const auto &value) -> string
+        return visit([this, index](auto &&arg) -> string
                      {
-            using T = decay_t<decltype(value)>;
-            if constexpr (is_same_v<T, int>) {
-                return to_string(value);
-            } else if constexpr (is_same_v<T, float>) {
-                ostringstream oss;
-                oss << fixed << setprecision(2) << value;
-                return oss.str();
-            } else if constexpr (is_same_v<T, std::string>) {
-                return value;
-            } else if constexpr (is_same_v<T, std::chrono::year_month_day>) {
-                std::ostringstream oss;
-                oss << value.year() << "-" << std::setfill('0') << std::setw(2) 
-                    << static_cast<unsigned>(value.month()) << "-" 
-                    << std::setfill('0') << std::setw(2) << static_cast<unsigned>(value.day());
-                return oss.str();
-            } else if constexpr (is_same_v<T, Category>) {
-                return categoryToString(value);
+            using T = decay_t<decltype(arg)>;
+            if constexpr (is_same_v<T, int>)
+                return to_string(arg);
+            else if constexpr (is_same_v<T, float>) {
+                stringstream ss;
+                ss << fixed << setprecision(2) << arg;
+                return ss.str();
             }
-            return "Unknown"; }, values[columnIndex]);
+            else if constexpr (is_same_v<T, string>)
+                return arg;
+            else if constexpr (is_same_v<T, chrono::year_month_day>) {
+                return format("{:%Y-%m-%d}", arg);
+            }
+            else if constexpr (is_same_v<T, NamedCategory>) {
+                // <--- CHANGED: Simply return the stored string value
+                return arg.value; 
+            }
+            return ""; }, values[index]);
     }
 
     void setValueFromString(size_t columnIndex, const string &strValue)
@@ -297,46 +325,14 @@ private:
     }
 
     // Helper method to parse category from string
-    Category parseCategory(const std::string &catStr)
+    NamedCategory parseCategory(const string &val)
     {
-        std::string upper = catStr;
-        std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
-
-        if (upper == "A")
-            return Category::GRADE_A;
-        if (upper == "B")
-            return Category::GRADE_B;
-        if (upper == "C")
-            return Category::GRADE_C;
-        if (upper == "D")
-            return Category::GRADE_D;
-        if (upper == "F")
-            return Category::GRADE_F;
-
-        return Category::CUSTOM;
+        // You can still add validation logic here if you want to restrict categories,
+        // but for "Custom" names, we just accept the value.
+        return NamedCategory{val};
     }
 
     // Helper method to convert category to string
-    std::string categoryToString(Category cat) const
-    {
-        switch (cat)
-        {
-        case Category::GRADE_A:
-            return "A";
-        case Category::GRADE_B:
-            return "B";
-        case Category::GRADE_C:
-            return "C";
-        case Category::GRADE_D:
-            return "D";
-        case Category::GRADE_F:
-            return "F";
-        case Category::CUSTOM:
-            return "Custom";
-        default:
-            return "Unknown";
-        }
-    }
 };
 
 // Helper function to convert string to DataType

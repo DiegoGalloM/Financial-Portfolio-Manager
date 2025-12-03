@@ -186,7 +186,6 @@ public:
 
         cout << "1. Search for specific values" << endl;
         cout << "2. Filter data" << endl;
-        cout << "3. Advanced filtering" << endl;
         cout << "0. Back to main menu" << endl;
         cout << "\nSelect option: ";
 
@@ -375,7 +374,13 @@ private:
 
     void analyzeSpecificColumn()
     {
-        cout << "Available columns:" << endl;
+        // 1. Safety Check
+        if (!dataLoaded) {
+            cout << "Please load a file first." << endl;
+            return;
+        }
+
+        cout << "\nAvailable columns:" << endl;
         auto columnNames = analyzer.getColumnNames();
         auto columnTypes = analyzer.getColumnTypes();
 
@@ -386,33 +391,38 @@ private:
         }
 
         cout << "\nEnter column name to analyze: ";
+        
+        // FIX #1: Clean the buffer to prevent skipping input
         string columnName;
+        cin >> ws; 
         getline(cin, columnName);
 
         // Check if column exists
-        if (find(columnNames.begin(), columnNames.end(), columnName) == columnNames.end())
+        auto it = find(columnNames.begin(), columnNames.end(), columnName);
+        if (it == columnNames.end())
         {
-            cout << "Column '" << columnName << "' not found!" << endl;
+            cout << "Error: Column '" << columnName << "' not found!" << endl;
             return;
         }
 
-        cout << "\n Analysis for column: " << columnName << endl;
+        size_t index = distance(columnNames.begin(), it);
+        DataType type = columnTypes[index]; // Get type directly
+
+        cout << "\nAnalysis for column: " << columnName << endl;
         cout << string(40, '=') << endl;
 
-        // Find column index and analyze based on type
-        auto it = find(columnNames.begin(), columnNames.end(), columnName);
-        size_t index = distance(columnNames.begin(), it);
-
-        if (columnTypes[index] == DataType::INTEGER || columnTypes[index] == DataType::FLOAT)
+        // FIX #2: Removed "row.isNumericColumn" check.
+        // We trust 'type' because 'columnTypes' is the source of truth.
+        if (type == DataType::INTEGER || type == DataType::FLOAT)
         {
-            // Create temporary analyzer for single column numeric stats
+            // --- NUMERIC ANALYSIS ---
             vector<double> values;
-            for (const auto &row : analyzer.getData())
+            const auto& data = analyzer.getData();
+
+            for (const auto &row : data)
             {
-                if (row.isNumericColumn(index))
-                {
-                    values.push_back(row.getNumericValue(index));
-                }
+                // Directly get the value. Dato.h handles the variant access.
+                values.push_back(row.getNumericValue(index));
             }
 
             if (!values.empty())
@@ -429,19 +439,27 @@ private:
 
                 if (values.size() > 1)
                 {
-                    double median = (values.size() % 2 == 0) ? (values[values.size() / 2 - 1] + values[values.size() / 2]) / 2.0 : values[values.size() / 2];
+                    double median;
+                    if (values.size() % 2 == 0)
+                        median = (values[values.size() / 2 - 1] + values[values.size() / 2]) / 2.0;
+                    else
+                        median = values[values.size() / 2];
                     cout << "   Median: " << median << endl;
                 }
             }
         }
         else
         {
-            // Categorical analysis
+            // --- CATEGORICAL / STRING / DATE ANALYSIS ---
             map<string, int> frequency;
-            for (const auto &row : analyzer.getData())
+            const auto& data = analyzer.getData();
+
+            for (const auto &row : data)
             {
                 string value = row.getValueAsString(index);
-                frequency[value]++;
+                if (!value.empty()) {
+                    frequency[value]++;
+                }
             }
 
             cout << " Categorical Analysis:" << endl;
@@ -462,6 +480,9 @@ private:
                      << percentage << "%)" << endl;
             }
         }
+        
+        cout << "\nPress Enter to continue...";
+        cin.get(); 
     }
 
     void searchData()

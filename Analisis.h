@@ -134,7 +134,7 @@ public:
         }
     }
 
-    void printCategoricalStatistics()
+void printCategoricalStatistics()
     {
         if (data.empty())
         {
@@ -144,13 +144,21 @@ public:
 
         std::cout << "\n===== CATEGORICAL STATISTICS =====" << std::endl;
 
+        bool foundCategory = false;
         for (size_t i = 0; i < columnNames.size(); ++i)
         {
-            if (columnTypes[i] == DataType::STRING || columnTypes[i] == DataType::CATEGORY)
+            // We check for BOTH explicitly declared Categories AND Strings
+            // (Since "Name" might be detected as String but we still want frequency stats)
+            if (columnTypes[i] == DataType::CATEGORY || columnTypes[i] == DataType::STRING)
             {
                 printFrequencyAnalysis(i);
                 std::cout << std::endl;
+                foundCategory = true;
             }
+        }
+
+        if (!foundCategory) {
+            std::cout << "No categorical columns found." << std::endl;
         }
     }
 
@@ -694,30 +702,48 @@ private:
     // Helper method to print frequency analysis for categorical columns
     void printFrequencyAnalysis(size_t columnIndex)
     {
+        // Map to count occurrences of each unique string
         std::map<std::string, int> frequency;
 
         for (const auto &row : data)
         {
+            // This is the key: getValueAsString handles the new NamedCategory struct automatically
             std::string value = row.getValueAsString(columnIndex);
-            frequency[value]++;
+            
+            // Skip empty values if desired
+            if (!value.empty()) {
+                frequency[value]++;
+            }
         }
 
+        // Display logic
         std::cout << "Frequency analysis for '" << columnNames[columnIndex] << "':" << std::endl;
-        std::cout << std::setw(20) << "Value" << std::setw(10) << "Count" << std::setw(10) << "%" << std::endl;
-        std::cout << std::string(40, '-') << std::endl;
+        std::cout << std::setw(30) << std::left << "Value" 
+                  << std::setw(10) << std::right << "Count" 
+                  << std::setw(10) << "%" << std::endl;
+        std::cout << std::string(50, '-') << std::endl;
 
-        // Sort by frequency (descending)
+        // Sort by frequency (descending) for better readability
         std::vector<std::pair<std::string, int>> sortedFreq(frequency.begin(), frequency.end());
         std::sort(sortedFreq.begin(), sortedFreq.end(),
                   [](const auto &a, const auto &b)
                   { return a.second > b.second; });
 
+        // Print top 10 (or all)
+        int displayed = 0;
         for (const auto &pair : sortedFreq)
         {
             double percentage = (double)pair.second / data.size() * 100.0;
-            std::cout << std::setw(20) << pair.first
-                      << std::setw(10) << pair.second
-                      << std::setw(9) << std::fixed << std::setprecision(1) << percentage << "%" << std::endl;
+            std::cout << std::setw(30) << std::left << pair.first.substr(0, 29) // Truncate long names
+                      << std::setw(10) << std::right << pair.second
+                      << std::setw(10) << std::fixed << std::setprecision(2) << percentage << "%" 
+                      << std::endl;
+            
+            displayed++;
+            if (displayed >= 20) { // Limit to top 20 to prevent console flooding
+                std::cout << "... (" << (sortedFreq.size() - 20) << " more unique values) ..." << std::endl;
+                break;
+            }
         }
     }
 };
