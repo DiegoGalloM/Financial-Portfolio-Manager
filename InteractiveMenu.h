@@ -160,7 +160,7 @@ public:
             analyzeSpecificColumn();
             break;
         case 4:
-            cout << "🔍 COMPLETE STATISTICAL REPORT" << endl;
+            cout << "COMPLETE STATISTICAL REPORT" << endl;
             cout << string(50, '=') << endl;
             analyzer.printBasicStatistics();
             analyzer.printNumericStatistics();
@@ -554,7 +554,7 @@ private:
 
         auto filtered = analyzer.filterData(columnName, operation, value);
 
-        cout << "\n📊 Filter Results:" << endl;
+        cout << "\n Filter Results:" << endl;
         cout << "Found " << filtered.size() << " rows matching criteria: "
              << columnName << " " << operation << " " << value << endl;
 
@@ -626,7 +626,7 @@ private:
             return;
         }
 
-        cout << "\n📊 Selected Columns Display:" << endl;
+        cout << "\nSelected Columns Display:" << endl;
 
         // Print selected headers
         for (size_t col : selectedColumns)
@@ -651,7 +651,7 @@ private:
 
     void generateSummaryReport()
     {
-        cout << "\n📈 COMPREHENSIVE SUMMARY REPORT" << endl;
+        cout << "\nCOMPREHENSIVE SUMMARY REPORT" << endl;
         cout << string(60, '=') << endl;
         cout << "Generated on: " << __DATE__ << " " << __TIME__ << endl;
         cout << "File: " << currentFile << endl;
@@ -663,7 +663,7 @@ private:
 
         cout << "\n"
              << string(60, '=') << endl;
-        cout << "🎯 Report completed successfully!" << endl;
+        cout << "Report completed successfully!" << endl;
     }
 
     // =========================================================
