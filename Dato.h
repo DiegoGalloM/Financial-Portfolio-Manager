@@ -328,7 +328,6 @@ private:
         return std::chrono::year_month_day(std::chrono::year(1900), std::chrono::month(1), std::chrono::day(1));
     }
 
-    // Helper method to parse category from string
     NamedCategory parseCategory(const string &val)
     {
         // You can still add validation logic here if you want to restrict categories,
@@ -339,7 +338,6 @@ private:
     // Helper method to convert category to string
 };
 
-// Helper function to convert string to DataType
 inline DataType stringToDataType(const std::string &typeStr)
 {
     std::string lower = typeStr;
@@ -359,7 +357,6 @@ inline DataType stringToDataType(const std::string &typeStr)
     return DataType::STRING; // Default to string
 }
 
-// Helper function to convert DataType to string
 inline std::string dataTypeToString(DataType type)
 {
     switch (type)
