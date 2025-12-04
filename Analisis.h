@@ -31,7 +31,8 @@ public:
 
     // Method to load CSV file and automatically detect data types
     // Overload without progress callback kept for compatibility
-    bool loadCSV(const string &filepath) {
+    bool loadCSV(const string &filepath)
+    {
         return loadCSV(filepath, nullptr);
     }
 
@@ -57,9 +58,12 @@ public:
 
         // Attempt to get total file size for progress estimation
         std::uintmax_t totalBytes = 0;
-        try {
+        try
+        {
             totalBytes = std::filesystem::file_size(filepath);
-        } catch (...) {
+        }
+        catch (...)
+        {
             totalBytes = 0;
         }
 
@@ -91,11 +95,18 @@ public:
                 bytesRead += static_cast<std::uintmax_t>(line.size()) + 1; // +1 for newline
                 int percent = static_cast<int>((double)bytesRead * 100.0 / (double)totalBytes);
                 // Reserve 100% for final completion to avoid duplicate "finished" bar
-                if (percent > 99) percent = 99;
+                if (percent > 99)
+                    percent = 99;
                 if (percent != lastReported)
                 {
                     lastReported = percent;
-                    try { progressCallback(percent); } catch (...) {}
+                    try
+                    {
+                        progressCallback(percent);
+                    }
+                    catch (...)
+                    {
+                    }
                 }
             }
         }
@@ -104,27 +115,28 @@ public:
         if (rawData.empty())
         {
             std::cerr << "Error: No data rows found in CSV" << std::endl;
-            if (progressCallback) progressCallback(100);
+            if (progressCallback)
+                progressCallback(100);
             return false;
         }
 
         detectDataTypes(rawData);
 
-        // Compute average bytes per row to estimate conversion work
         std::uintmax_t avgRowBytes = 0;
-        if (rawData.size() > 0 && totalBytes > 0) {
+        if (rawData.size() > 0 && totalBytes > 0)
+        {
             avgRowBytes = totalBytes / rawData.size();
-            if (avgRowBytes == 0) avgRowBytes = 1;
+            if (avgRowBytes == 0)
+                avgRowBytes = 1;
         }
 
-        // Total work = reading bytes + estimated conversion bytes
         std::uintmax_t totalWork = totalBytes + avgRowBytes * rawData.size();
 
-        // Convert raw data to Dato while reporting unified progress (0..100)
         convertRawDataToDato(rawData, progressCallback, bytesRead, totalWork, avgRowBytes);
 
         // Ensure the progress UI reaches 100% before printing completion message
-        if (progressCallback) progressCallback(100);
+        if (progressCallback)
+            progressCallback(100);
 
         std::cout << "Successfully loaded " << data.size() << " rows with "
                   << columnNames.size() << " columns from " << filepath << std::endl;
@@ -184,7 +196,7 @@ public:
         }
     }
 
-void printCategoricalStatistics()
+    void printCategoricalStatistics()
     {
         if (data.empty())
         {
@@ -207,7 +219,8 @@ void printCategoricalStatistics()
             }
         }
 
-        if (!foundCategory) {
+        if (!foundCategory)
+        {
             std::cout << "No categorical columns found." << std::endl;
         }
     }
@@ -216,32 +229,36 @@ void printCategoricalStatistics()
     // NUEVAS FUNCIONES PARA EL PROYECTO FINAL
     // =========================================================
 
-    // OPCIÓN 6: HISTOGRAMA ASCII
-    void plotHistogram(const string& columnName, int bins = 10)
+    void plotHistogram(const string &columnName, int bins = 10)
     {
         // 1. Validar existencia de columna
         auto it = find(columnNames.begin(), columnNames.end(), columnName);
-        if (it == columnNames.end()) {
+        if (it == columnNames.end())
+        {
             cout << "Error: Columna '" << columnName << "' no encontrada.\n";
             return;
         }
         size_t colIdx = distance(columnNames.begin(), it);
 
         // 2. Validar que sea numérico (no podemos hacer histograma de texto)
-        if (columnTypes[colIdx] != DataType::INTEGER && columnTypes[colIdx] != DataType::FLOAT) {
+        if (columnTypes[colIdx] != DataType::INTEGER && columnTypes[colIdx] != DataType::FLOAT)
+        {
             cout << "Error: El histograma solo funciona con columnas numericas (Integer/Float).\n";
             return;
         }
 
         // 3. Recolectar datos
         vector<double> values;
-        for (const auto& row : data) {
-            if (row.isNumericColumn(colIdx)) {
+        for (const auto &row : data)
+        {
+            if (row.isNumericColumn(colIdx))
+            {
                 values.push_back(row.getNumericValue(colIdx));
             }
         }
 
-        if (values.empty()) {
+        if (values.empty())
+        {
             cout << "No hay datos validos para graficar.\n";
             return;
         }
@@ -251,7 +268,8 @@ void printCategoricalStatistics()
         double minVal = *minIt;
         double maxVal = *maxIt;
 
-        if (minVal == maxVal) {
+        if (minVal == maxVal)
+        {
             cout << "Todos los valores son iguales (" << minVal << "). No se puede graficar.\n";
             return;
         }
@@ -261,26 +279,30 @@ void printCategoricalStatistics()
         vector<int> binCounts(bins, 0);
 
         // 5. Llenar las "cubetas" (bins)
-        for (double v : values) {
+        for (double v : values)
+        {
             int bucket = min((int)((v - minVal) / step), bins - 1);
-            if (bucket >= 0 && bucket < bins) {
+            if (bucket >= 0 && bucket < bins)
+            {
                 binCounts[bucket]++;
             }
         }
 
         // 6. Dibujar en consola
         cout << "\n===== HISTOGRAMA: " << columnName << " =====" << endl;
-        cout << "Rango: [" << minVal << " a " << maxVal << "]\n" << endl;
+        cout << "Rango: [" << minVal << " a " << maxVal << "]\n"
+             << endl;
 
         int maxCount = *max_element(binCounts.begin(), binCounts.end());
-        
-        for (int i = 0; i < bins; ++i) {
+
+        for (int i = 0; i < bins; ++i)
+        {
             double binStart = minVal + (i * step);
             double binEnd = minVal + ((i + 1) * step);
-            
+
             // Etiqueta del rango
             cout << fixed << setprecision(1) << setw(8) << binStart << " - " << setw(8) << binEnd << " | ";
-            
+
             // Barra ASCII (normalizada a 40 caracteres de largo)
             int barLength = (maxCount > 0) ? (binCounts[i] * 40 / maxCount) : 0;
             cout << string(barLength, '*') << " (" << binCounts[i] << ")\n";
@@ -288,11 +310,11 @@ void printCategoricalStatistics()
         cout << string(60, '-') << endl;
     }
 
-    // OPCIÓN EXTRA: EXPORTAR REPORTE TXT
-    void exportReportTXT(const string& filename) 
+    void exportReportTXT(const string &filename)
     {
         ofstream file(filename);
-        if (!file.is_open()) {
+        if (!file.is_open())
+        {
             cout << "Error: No se pudo crear el archivo " << filename << endl;
             return;
         }
@@ -310,26 +332,32 @@ void printCategoricalStatistics()
         file << "--- ESTRUCTURA DE COLUMNAS ---\n";
         file << left << setw(25) << "NOMBRE" << setw(15) << "TIPO" << "\n";
         file << string(40, '-') << "\n";
-        for (size_t i = 0; i < columnNames.size(); ++i) {
-            file << left << setw(25) << columnNames[i] 
+        for (size_t i = 0; i < columnNames.size(); ++i)
+        {
+            file << left << setw(25) << columnNames[i]
                  << setw(15) << dataTypeToString(columnTypes[i]) << "\n";
         }
         file << "\n";
 
         // Sección 2: Estadísticas Rápidas (Solo numéricas)
         file << "--- RESUMEN ESTADISTICO (Numerico) ---\n";
-        for (size_t i = 0; i < columnNames.size(); ++i) {
-            if (columnTypes[i] == DataType::INTEGER || columnTypes[i] == DataType::FLOAT) {
-                
+        for (size_t i = 0; i < columnNames.size(); ++i)
+        {
+            if (columnTypes[i] == DataType::INTEGER || columnTypes[i] == DataType::FLOAT)
+            {
+
                 // Recalcular rápido para el reporte
                 vector<double> vals;
-                for(const auto& row : data) if(row.isNumericColumn(i)) vals.push_back(row.getNumericValue(i));
-                
-                if(!vals.empty()) {
+                for (const auto &row : data)
+                    if (row.isNumericColumn(i))
+                        vals.push_back(row.getNumericValue(i));
+
+                if (!vals.empty())
+                {
                     double sum = accumulate(vals.begin(), vals.end(), 0.0);
                     double mean = sum / vals.size();
                     auto [minIt, maxIt] = minmax_element(vals.begin(), vals.end());
-                    
+
                     file << "* Columna: " << columnNames[i] << "\n";
                     file << "  - Promedio: " << mean << "\n";
                     file << "  - Minimo:   " << *minIt << "\n";
@@ -342,25 +370,27 @@ void printCategoricalStatistics()
         // Sección 3: Vista Previa de Datos
         file << "\n--- VISTA PREVIA (Primeras 10 filas) ---\n";
         // Headers
-        for (size_t i = 0; i < columnNames.size(); ++i) {
-            file << columnNames[i] << (i < columnNames.size()-1 ? "," : "");
+        for (size_t i = 0; i < columnNames.size(); ++i)
+        {
+            file << columnNames[i] << (i < columnNames.size() - 1 ? "," : "");
         }
         file << "\n";
-        
+
         // Rows
         int limit = min((int)data.size(), 10);
-        for(int i = 0; i < limit; ++i) {
-             for(size_t c = 0; c < columnNames.size(); ++c) {
-                 file << data[i].getValueAsString(c) << (c < columnNames.size()-1 ? "," : "");
-             }
-             file << "\n";
+        for (int i = 0; i < limit; ++i)
+        {
+            for (size_t c = 0; c < columnNames.size(); ++c)
+            {
+                file << data[i].getValueAsString(c) << (c < columnNames.size() - 1 ? "," : "");
+            }
+            file << "\n";
         }
 
         cout << ">>> Reporte generado exitosamente: " << filename << endl;
         file.close();
     }
 
-    // Method to print first few rows of data
     void printHead(int numRows = 5)
     {
         if (data.empty())
@@ -442,10 +472,19 @@ void printCategoricalStatistics()
         double numCompareVal = 0.0;
         long long dateCompareVal = 0;
 
-        if (type == DataType::INTEGER || type == DataType::FLOAT) {
-            try { numCompareVal = stod(value); } catch (...) { numCompareVal = 0.0; }
+        if (type == DataType::INTEGER || type == DataType::FLOAT)
+        {
+            try
+            {
+                numCompareVal = stod(value);
+            }
+            catch (...)
+            {
+                numCompareVal = 0.0;
+            }
         }
-        else if (type == DataType::DATE) {
+        else if (type == DataType::DATE)
+        {
             // Utilizes the existing helper function in your code
             dateCompareVal = dateToComparable(value);
         }
@@ -460,12 +499,18 @@ void printCategoricalStatistics()
                 // --- NUMERIC COMPARISON ---
                 double cellValue = row.getNumericValue(columnIndex);
 
-                if (operation == "==" || operation == "=") matches = (std::abs(cellValue - numCompareVal) < 1e-9);
-                else if (operation == ">")  matches = (cellValue > numCompareVal);
-                else if (operation == "<")  matches = (cellValue < numCompareVal);
-                else if (operation == ">=") matches = (cellValue >= numCompareVal);
-                else if (operation == "<=") matches = (cellValue <= numCompareVal);
-                else if (operation == "!=") matches = (std::abs(cellValue - numCompareVal) >= 1e-9);
+                if (operation == "==" || operation == "=")
+                    matches = (std::abs(cellValue - numCompareVal) < 1e-9);
+                else if (operation == ">")
+                    matches = (cellValue > numCompareVal);
+                else if (operation == "<")
+                    matches = (cellValue < numCompareVal);
+                else if (operation == ">=")
+                    matches = (cellValue >= numCompareVal);
+                else if (operation == "<=")
+                    matches = (cellValue <= numCompareVal);
+                else if (operation == "!=")
+                    matches = (std::abs(cellValue - numCompareVal) >= 1e-9);
             }
             else if (type == DataType::DATE)
             {
@@ -473,24 +518,35 @@ void printCategoricalStatistics()
                 // Convert the cell value to a comparable integer (YYYYMMDD)
                 long long cellDate = dateToComparable(row.getValueAsString(columnIndex));
 
-                if (operation == "==" || operation == "=") matches = (cellDate == dateCompareVal);
-                else if (operation == "!=") matches = (cellDate != dateCompareVal);
-                else if (operation == ">")  matches = (cellDate > dateCompareVal);
-                else if (operation == "<")  matches = (cellDate < dateCompareVal);
-                else if (operation == ">=") matches = (cellDate >= dateCompareVal);
-                else if (operation == "<=") matches = (cellDate <= dateCompareVal);
+                if (operation == "==" || operation == "=")
+                    matches = (cellDate == dateCompareVal);
+                else if (operation == "!=")
+                    matches = (cellDate != dateCompareVal);
+                else if (operation == ">")
+                    matches = (cellDate > dateCompareVal);
+                else if (operation == "<")
+                    matches = (cellDate < dateCompareVal);
+                else if (operation == ">=")
+                    matches = (cellDate >= dateCompareVal);
+                else if (operation == "<=")
+                    matches = (cellDate <= dateCompareVal);
             }
             else
             {
                 // --- STRING / CATEGORY COMPARISON ---
                 std::string cellValue = row.getValueAsString(columnIndex);
 
-                if (operation == "==" || operation == "=") matches = (cellValue == value);
-                else if (operation == "!=") matches = (cellValue != value);
-                else if (operation == "contains") matches = (cellValue.find(value) != string::npos);
+                if (operation == "==" || operation == "=")
+                    matches = (cellValue == value);
+                else if (operation == "!=")
+                    matches = (cellValue != value);
+                else if (operation == "contains")
+                    matches = (cellValue.find(value) != string::npos);
                 // Added basic alphabetical support
-                else if (operation == ">")  matches = (cellValue > value);
-                else if (operation == "<")  matches = (cellValue < value);
+                else if (operation == ">")
+                    matches = (cellValue > value);
+                else if (operation == "<")
+                    matches = (cellValue < value);
             }
 
             if (matches)
@@ -619,14 +675,18 @@ private:
     long long dateToComparable(string dateStr)
     {
         string cleanDate;
-        for (char c : dateStr) if (isdigit(c)) cleanDate += c;
+        for (char c : dateStr)
+            if (isdigit(c))
+                cleanDate += c;
 
         // If format is DDMMAAAA (e.g. 31012023), convert to AAAAMMDD (20230131)
-        if (cleanDate.length() == 8) {
+        if (cleanDate.length() == 8)
+        {
             // Check if it looks like ISO (start with 19 or 20) or DD/MM
             // Heuristic: If first 4 digits are < 1900, it's likely DDMMYYYY
             int firstPart = stoi(cleanDate.substr(0, 4));
-            if (firstPart < 1900) { 
+            if (firstPart < 1900)
+            {
                 string day = cleanDate.substr(0, 2);
                 string month = cleanDate.substr(2, 2);
                 string year = cleanDate.substr(4, 4);
@@ -634,7 +694,14 @@ private:
             }
         }
         // If it's already YYYYMMDD or unknown, return as is
-        try { return stoll(cleanDate); } catch (...) { return 0; }
+        try
+        {
+            return stoll(cleanDate);
+        }
+        catch (...)
+        {
+            return 0;
+        }
     }
 
     bool mightBeCategory(const vector<vector<string>> &rawData, size_t columnIndex)
@@ -684,8 +751,15 @@ private:
             {
                 bytesRead += avgRowBytes;
                 int percent = static_cast<int>((double)bytesRead * 100.0 / (double)totalWork);
-                if (percent > 99) percent = 99; // leave 100 for finalization
-                try { progressCallback(percent); } catch (...) {}
+                if (percent > 99)
+                    percent = 99; // leave 100 for finalization
+                try
+                {
+                    progressCallback(percent);
+                }
+                catch (...)
+                {
+                }
             }
         }
     }
@@ -773,17 +847,18 @@ private:
         {
             // This is the key: getValueAsString handles the new NamedCategory struct automatically
             std::string value = row.getValueAsString(columnIndex);
-            
+
             // Skip empty values if desired
-            if (!value.empty()) {
+            if (!value.empty())
+            {
                 frequency[value]++;
             }
         }
 
         // Display logic
         std::cout << "Frequency analysis for '" << columnNames[columnIndex] << "':" << std::endl;
-        std::cout << std::setw(30) << std::left << "Value" 
-                  << std::setw(10) << std::right << "Count" 
+        std::cout << std::setw(30) << std::left << "Value"
+                  << std::setw(10) << std::right << "Count"
                   << std::setw(10) << "%" << std::endl;
         std::cout << std::string(50, '-') << std::endl;
 
@@ -800,11 +875,12 @@ private:
             double percentage = (double)pair.second / data.size() * 100.0;
             std::cout << std::setw(30) << std::left << pair.first.substr(0, 29) // Truncate long names
                       << std::setw(10) << std::right << pair.second
-                      << std::setw(10) << std::fixed << std::setprecision(2) << percentage << "%" 
+                      << std::setw(10) << std::fixed << std::setprecision(2) << percentage << "%"
                       << std::endl;
-            
+
             displayed++;
-            if (displayed >= 20) { // Limit to top 20 to prevent console flooding
+            if (displayed >= 20)
+            { // Limit to top 20 to prevent console flooding
                 std::cout << "... (" << (sortedFreq.size() - 20) << " more unique values) ..." << std::endl;
                 break;
             }
